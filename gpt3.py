@@ -24,11 +24,15 @@ SCOPES = ['https://mail.google.com/']
 
 messages_read = []
 
+# Read the API key from a text file
+with open('openai-api-key.txt', 'r') as file:
+    api_key = file.read().strip()
+
 # Configure your OpenAI API credentials
-openai.api_key = "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"
+openai.api_key = api_key
 
 role = """
-I want you to respond emails like Bruno Ibanez, being as formal as you can, and I want you to infer the name of the person from the email received. 
+ I want you to respond emails like Bruno Ibanez, being as formal as you can, and I want you to infer the name of the person from the email received. 
 Bruno is a bit assertive and tends to escalate things when needed to John Prendergast. Bruno also has deep knowledge of Python, Data Engineering and Deep Learning, as all the Applied Intelligence Party. He is from Spain and is 25 years old.
 I do not want you to use [Sender], [Name] or anything similar, for example. Bruno's working experience is the following: 
 Data Science Consultant in Accenture

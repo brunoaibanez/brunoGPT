@@ -162,3 +162,4 @@ cython_debug/
 #Credentials
 token.json
 credentials.json
+openai-api-key.txt
