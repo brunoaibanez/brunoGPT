@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import os.path
+import os
+import sys
 
 import re
 import json
@@ -31,27 +33,13 @@ with open('openai-api-key.txt', 'r') as file:
 # Configure your OpenAI API credentials
 openai.api_key = api_key
 
-role = """
- I want you to respond emails like Bruno Ibanez, being as formal as you can, and I want you to infer the name of the person from the email received. 
-Bruno is a bit assertive and tends to escalate things when needed to John Prendergast. Bruno also has deep knowledge of Python, Data Engineering and Deep Learning, as all the Applied Intelligence Party. He is from Spain and is 25 years old.
-I do not want you to use [Sender], [Name] or anything similar, for example. Bruno's working experience is the following: 
-Data Science Consultant in Accenture
-- Managed a team to deliver a project that directly impacted 500k customers and a cumulative of 7.6B€ 
-- Migration to cloud and productionizing of a Data Science multiplatform project that produced ETL processes for a D365 front-end
-- MVP to Pilot on a Google’s DocumentAI solution
-- AWS and GCP
-- Terraform, Docker, Azure DevOps Pipelines, Airflow, Snowflake
-- SQL, Pyspark, R
-Skills: SQL · Data Analysis · Problem Solving · Data Science · Google Cloud Platform (GCP) · Apache Airflow
-AI Engineer in Telefónica: 
-Telefónica logo
-Artificial Intelligence EngineerArtificial Intelligence Engineer
-TelefónicaTelefónica
-- Deep Learning Natural Language Processing (NLP) and Computer Vision (CV) implementing Proof-of-Concepts or MVPs.
-Research on DeepFakes Detection, Action Recognition, Face Recognition, Image Stylization, NLP Language Models (BERT, Transformers and Markov Models), Text Summarisation, Adversarial Attacks on DNNs, Music Generation with Recurrent Neural Networks (RNNs), Audio Recognition (via Spectrogram), Conversational Bots.
-"""
+# Read the classification role from a text file
+with open('mode_classification/role.txt', 'r') as file:
+    classification_role = file.read().strip()
 
-def generate_response(sender, subject, body):
+
+
+def generate_response(selected_role, sender, subject, body):
     # Compose the prompt for ChatGPT
     prompt = f"Sender: {sender}\nSubject: {subject}\nBody: {body}\n\n"
 
@@ -59,7 +47,7 @@ def generate_response(sender, subject, body):
     reply = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
     messages=[
-            {"role": "system", "content": role},
+            {"role": "system", "content": selected_role},
             {"role": "user", "content": prompt}
         ]
     )
@@ -67,15 +55,27 @@ def generate_response(sender, subject, body):
     return reply.choices[0]["message"]["content"].strip()
 
 
-def main():
+def main(email):
     """Shows basic usage of the Gmail API.
     Lists the user's Gmail labels.
     """
     creds = None
-    user_id = "bruno.ibanezlopez@gmail.com"
+    user_id = email
+
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
+
+    # Read all roles
+    roles = []
+    folder_list = list_folders("./modes/")
+
+    for folder in folder_list:
+        # Read the API key from a text file
+        with open(f"./modes/{folder}/role.txt", 'r') as file:
+            role = file.read().strip()
+            roles.append(role)
+
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
@@ -116,8 +116,11 @@ def main():
                 print("Snippet:", snippet)
                 print("------------------------")
 
-                # Respond to the email
-                reply_text = generate_response(sender, subject, snippet)
+                classification = generate_response(classification_role, sender, subject, snippet)
+                print(classification)
+                
+                reply_text = generate_response(roles[int(classification)], sender, subject, snippet)
+
                 send_reply(service, user_id, message['id'], reply_text, sender, subject)
 
             # Wait for two seconds before checking the inbox again
@@ -169,7 +172,17 @@ def extract_email(string):
     else:
         return None  # No valid email address found
 
-
+def list_folders(directory):
+    folders = []
+    for entry in os.scandir(directory):
+        if entry.is_dir():
+            folders.append(entry.name)
+    return folders
 
 if __name__ == '__main__':
-    main()
+    
+    if len(sys.argv) != 2:
+        print("Usage: python gpt3.py email")
+        sys.exit(1)
+    email = sys.argv[1]
+    main(email)
